@@ -6,7 +6,7 @@
 CC = gfortran
 CPP = gfortran -cpp
 CXXFLAGS = -g -Wall
-LDFLAGS = 
+LDFLAGS = -llapack -lblas
 
 # Makefile settings - Can be customized.
 APPNAME = myapp
