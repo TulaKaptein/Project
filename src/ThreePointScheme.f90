@@ -2,6 +2,7 @@ module ThreePointSchemeModule
     use NumberKinds
     use MakeGridModule
     use Diagonalization
+    use PotentialsModule
     implicit none
     save
     private 
@@ -29,18 +30,13 @@ subroutine ThreePointScheme(grid1)
         matrixS(i + 1, i) = 1
     endforall
 
-    ! ! fill matrix V according to the potential chosen
-    ! forall (i = 1:size(matrixV,1))
-    !   matrixV(i,i) = potential(grid1%gridPoints(i))
-    ! end forall
-
-    ! do i = 1, grid1%numberOfPoints
-    !     print *, matrixS(i,:)
-    ! enddo
+    do i = 1, size(matrixV, 1)
+        matrixV(i,i) = ParticleInBox(grid1%gridPoints(i), (grid1%interval(1))*2)
+    enddo
+    matrixV(1,1) = ParticleInBox(grid1%gridPoints(1), (grid1%interval(1))*2)
 
     ! calculate matrix L
     matrixL = (-1/(grid1%h)**2)*matrixS + matrixV
-    print *, grid1%h
 
     ! allocate and initialize the eigenvectors and -values
     allocate(eigenVectors(grid1%numberOfPoints, grid1%numberOfPoints))
@@ -51,23 +47,22 @@ subroutine ThreePointScheme(grid1)
     ! diagonalize matrix L
     call diagonalize(matrixL, eigenVectors, eigenValues)
 
-    print *
-    print *, "eigenValues"
+    open(13, file="eigenValues.txt", action="write")
+    write(13, *) "eigenValues"
     do i = 1, size(eigenValues)
-        print *, eigenValues(i)
+        write(13, *) eigenValues(i)
     enddo
-    print *
+    close(13)
 
-    print *, "eigenVectors"
+    open(14, file="eigenVectors.txt", action="write")
+    write(14,*) "eigenVectors"
     do i = 1, size(eigenVectors, 1)
-        print *, eigenVectors(i, :)
+        write(14, *) eigenVectors(i, 3)
     enddo
-    print *
+    close(14)
 
     ! ! deallocate the matrices
-    ! deallocate(matrixS(grid1%numberOfPoints, grid1%numberOfPoints))
-    ! deallocate(matrixV(grid1%numberOfPoints, grid1%numberOfPoints))
-    ! deallocate(matrixL(grid1%numberOfPoints, grid1%numberOfPoints))
+    deallocate(matrixS, matrixV, matrixL)
 
 end subroutine
     
