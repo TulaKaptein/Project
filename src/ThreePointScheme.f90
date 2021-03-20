@@ -9,7 +9,7 @@ module ThreePointSchemeModule
     public :: ThreePointScheme
     
 contains
-subroutine ThreePointScheme(grid1)
+subroutine ThreePointScheme(grid1, eigenVectors, eigenValues)
     type(Grid), intent(in) :: grid1
     real(KREAL), allocatable :: matrixS(:,:), matrixV(:,:), matrixL(:,:)
     real(KREAL), allocatable :: eigenVectors(:,:), eigenValues(:)
@@ -30,10 +30,10 @@ subroutine ThreePointScheme(grid1)
         matrixS(i + 1, i) = 1
     endforall
 
+    ! fill matrix V
     do i = 1, size(matrixV, 1)
         matrixV(i,i) = ParticleInBox(grid1%gridPoints(i), (grid1%interval(1))*2)
     enddo
-    matrixV(1,1) = ParticleInBox(grid1%gridPoints(1), (grid1%interval(1))*2)
 
     ! calculate matrix L
     matrixL = (-1/(grid1%h)**2)*matrixS + matrixV
@@ -47,6 +47,9 @@ subroutine ThreePointScheme(grid1)
     ! diagonalize matrix L
     call diagonalize(matrixL, eigenVectors, eigenValues)
 
+    ! function that checks whether it's negative
+    ! eigenVectors = -1*eigenVectors
+
     open(13, file="eigenValues.txt", action="write")
     write(13, *) "eigenValues"
     do i = 1, size(eigenValues)
@@ -57,7 +60,7 @@ subroutine ThreePointScheme(grid1)
     open(14, file="eigenVectors.txt", action="write")
     write(14,*) "eigenVectors"
     do i = 1, size(eigenVectors, 1)
-        write(14, *) eigenVectors(i, 3)
+        write(14, *) eigenVectors(i, 1)
     enddo
     close(14)
 
