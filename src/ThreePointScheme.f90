@@ -62,7 +62,7 @@ subroutine ThreePointScheme(grid1, eigenVectors, eigenValues)
     open(14, file="eigenVectors.txt", action="write")
     write(14,*) "eigenVectors"
     do i = 1, size(eigenVectors, 1)
-        write(14, *) eigenVectors(i, :)
+        write(14, *) eigenVectors(i, 1)
     enddo
     close(14)
 

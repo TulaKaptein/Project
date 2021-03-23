@@ -12,61 +12,83 @@ module ShootingAlgorithmModule
     type doubleArray
         real(KREAL), allocatable :: in(:)
         real(KREAL), allocatable :: out(:)
+        real(KREAL), allocatable :: final(:)
     end type
     
 contains
 
 subroutine Shooting()
     type (Grid) :: gridCalc
-    type (doubleArray) :: yAlpha
+    type (doubleArray), allocatable :: yAlpha(:)
     real(KREAL), allocatable :: eigenVectors(:,:)
     real(KREAL), allocatable :: eigenValues(:)
-    real(KREAL) :: alpha, norm, correction
-    integer(KINT) :: xMatch, i
+    real(KREAL) :: norm, correction, lambda
+    integer(KINT) :: xMatch, i, ii, alpha
 
     ! make grid
     call New(gridCalc)
     ! calculate three point scheme
     call ThreePointScheme(gridCalc, eigenVectors, eigenValues)
 
-    ! for one value of lambda
+    ! allocate yAlpha array
+    allocate(yAlpha(size(eigenValues)))
+
+! for each value of lambda
+do i = 1, size(eigenValues)
+
     xMatch = gridCalc%numberOfPoints/2
-    allocate(yAlpha%out(gridCalc%numberOfPoints))
-    yAlpha%out = 0
-    allocate(yAlpha%in(gridCalc%numberOfPoints))
-    yAlpha%in = 0
+    allocate(yAlpha(i)%out(gridCalc%numberOfPoints))
+    yAlpha(i)%out = 0
+    allocate(yAlpha(i)%in(gridCalc%numberOfPoints))
+    yAlpha(i)%in = 0
+    allocate(yAlpha(i)%final(gridCalc%numberOfPoints))
+    yAlpha(i)%final = 0
 
-    alpha = eigenValues(2)
+    alpha = i
+    lambda = eigenValues(alpha)
 
-! do i = 1, 2
-    yAlpha%in = 0
-    yAlpha%out = 0
-    call Outwards(gridCalc, eigenVectors(:,1), alpha, yAlpha%out)
-    call Inwards(gridCalc, eigenVectors(:,1), alpha, yAlpha%in)
+    do
+        yAlpha(i)%in = 0
+        yAlpha(i)%out = 0
+        call Outwards(gridCalc, eigenVectors(:,alpha), lambda, yAlpha(i)%out)
+        call Inwards(gridCalc, eigenVectors(:,alpha), lambda, yAlpha(i)%in)
+        
+        ! normalize the solutions
+        norm = norm2(yAlpha(i)%out)
+        yAlpha(i)%out = yAlpha(i)%out/norm 
+
+        norm = norm2(yAlpha(i)%in)
+        yAlpha(i)%in = yAlpha(i)%in/norm
     
-    ! normalize the solutions
-    norm = norm2(yAlpha%out)
-    yAlpha%out = yAlpha%out/norm 
+        correction = deltaLambda(gridCalc, yAlpha(i), xMatch)
+        print *, correction
 
-    norm = norm2(yAlpha%in)
-    yAlpha%in = yAlpha%in/norm
- 
-    correction = deltaLambda(gridCalc, yAlpha, xMatch)
+        lambda = lambda - correction
 
-    alpha = alpha - correction
-
-!     ! check for convergence
-!     if (abs(correction) < 1E-10) then 
-!         print *, "CONVERGED"
-!         exit
-!     endif
-! enddo
-
-    open(15, file="yAlpha.txt", action="write")
-    do i = 1, size(yAlpha%in)
-        write(15, *) yAlpha%out(i), yAlpha%in(i)
+        ! check for convergence
+        if (abs(correction) < 1E-10) then 
+            print *, "CONVERGED"
+            exit
+        endif
     enddo
+
+    ! save the final solutions
+    yAlpha(i)%final(:xMatch) = yAlpha(i)%out(0:xMatch)
+    yAlpha(i)%final(xMatch:) = yAlpha(i)%in(xMatch:)
+
+    ! normalize the solutions
+    norm = norm2(yAlpha(i)%final)
+    yAlpha(i)%final = yAlpha(i)%final/norm
+
+enddo
+
+    ! print out the values for all eigenvalues
+    open(15, file="yAlpha.txt", action="write")
+        ! do ii = 1, size(yAlpha(1)%final)
+        !     write(15, *) yAlpha(1:)%final(ii)
+        ! enddo
     close(15)
+
 
     deallocate(eigenVectors, eigenValues)
     call Delete(gridCalc)
@@ -103,22 +125,17 @@ subroutine Outwards(grid1, eigenVectorLambda, lambda, yAlpha)
     real(KREAL) :: eigenVectorLambda(:)
     real(KREAL) :: lambda
     real(KREAL) :: yAlpha(:)
-    real(KREAL) :: yOld, yCurrent, yNew
     integer(KINT) :: xMatch, numberOfPoints, i
+    real(KREAL) :: potential = 0
 
-    yOld = eigenVectorLambda(1)
-    yCurrent = eigenVectorLambda(2)
     xMatch = grid1%numberOfPoints/2
     numberOfPoints = grid1%numberOfPoints
 
-    yAlpha(1) = yOld
-    yAlpha(2) = yCurrent
+    yAlpha(1) = eigenVectorLambda(1)
+    yAlpha(2) = eigenVectorLambda(2)
 
-    do i = 3, xMatch + 2
-        yNew = CalcStep(yOld, yCurrent, lambda, grid1%h)
-        yOld = yCurrent
-        yCurrent = yNew
-        yAlpha(i) = yNew
+    do i = 3, numberOfPoints
+        yAlpha(i) = -yAlpha(i-2) + 2*grid1%h**2*(potential - lambda + 1/(grid1%h)**2)*yAlpha(i-1)
     enddo
 
 end subroutine
@@ -128,31 +145,25 @@ subroutine Inwards(grid1, eigenVectorLambda, lambda, yAlpha)
     real(KREAL) :: eigenVectorLambda(:)
     real(KREAL) :: lambda
     real(KREAL) :: yAlpha(:)
-    real(KREAL) :: yOld, yCurrent, yNew
     integer(KINT) :: xMatch, numberOfPoints, i
+    real(KREAL) :: potential = 0
 
-    numberOfPoints = grid1%numberOfPoints
     xMatch = grid1%numberOfPoints/2
+    numberOfPoints = grid1%numberOfPoints
 
-    yOld = eigenVectorLambda(numberOfPoints)
-    yCurrent = eigenVectorLambda(numberOfPoints-1)
+    yAlpha(numberOfPoints) = eigenVectorLambda(numberOfPoints)
+    yAlpha(numberOfPoints - 1) = eigenVectorLambda(numberOfPoints-1)
 
-    yAlpha(numberOfPoints) = yOld 
-    yAlpha(numberOfPoints - 1) = yCurrent
-
-    do i = numberOfPoints - 2, xMatch - 2, -1
-        yNew = CalcStep(yOld, yCurrent, lambda, grid1%h)
-        yOld = yCurrent
-        yCurrent = yNew
-        yAlpha(i) = yNew
+    do i = numberOfPoints - 2, 1, -1
+        yAlpha(i) = -yAlpha(i+2) + 2*grid1%h**2*(potential - lambda + 1/(grid1%h)**2)*yAlpha(i+1)
     enddo
 
 end subroutine
 
-real(KREAL) function CalcStep(yOld, yCurrent, lambda, h) result(yNew)
-    real(KREAL) :: yOld, yCurrent, lambda, h
-    ! PotentiAL staat er nog niet in!!!
-    yNew = -1*yOld + (h**2)*(lambda + 2/(h**2))*yCurrent
-end function
+! real(KREAL) function CalcStep(yOld, yCurrent, lambda, h) result(yNew)
+!     real(KREAL) :: yOld, yCurrent, lambda, h
+!     ! PotentiAL staat er nog niet in!!!
+!     yNew = -1*yOld + (h**2)*(lambda + 2/(h**2))*yCurrent
+! end function
     
 end module ShootingAlgorithmModule
