@@ -9,7 +9,7 @@ module ShootingAlgorithmModule
     private 
     public :: Shooting
 
-    type doubleArray
+    type tripleArray
         real(KREAL), allocatable :: in(:)
         real(KREAL), allocatable :: out(:)
         real(KREAL), allocatable :: final(:)
@@ -19,7 +19,7 @@ contains
 
 subroutine Shooting()
     type (Grid) :: gridCalc
-    type (doubleArray), allocatable :: yAlpha(:)
+    type (tripleArray), allocatable :: yAlpha(:)
     real(KREAL), allocatable :: eigenVectors(:,:)
     real(KREAL), allocatable :: eigenValues(:)
     real(KREAL) :: norm, correction, lambda
@@ -82,14 +82,16 @@ do i = 1, size(eigenValues)
 
 enddo
 
-    ! print out the values for all eigenvalues
-    open(15, file="yAlpha.txt", action="write")
-        ! do ii = 1, size(yAlpha(1)%final)
-        !     write(15, *) yAlpha(1:)%final(ii)
-        ! enddo
-    close(15)
+    ! ! print out the values for all eigenvalues
+    ! open(15, file="yAlpha.txt", action="write")
+    !     ! do ii = 1, size(yAlpha(1)%final)
+    !     !     write(15, *) yAlpha(1:)%final(ii)
+    !     ! enddo
+    ! close(15)
 
+    ! call an outputwriter
 
+    ! deallocate everything
     deallocate(eigenVectors, eigenValues)
     call Delete(gridCalc)
 
@@ -97,7 +99,7 @@ end subroutine
 
 real(KREAL) function deltaLambda(grid1, yAlpha, xMatch)
     type (Grid) :: grid1
-    type (doubleArray) :: yAlpha
+    type (tripleArray) :: yAlpha
     integer(KINT) :: xMatch
     real(KREAL) :: yAlphaInDeriv, yAlphaOutDeriv, partA, partB, partC
 
@@ -159,11 +161,5 @@ subroutine Inwards(grid1, eigenVectorLambda, lambda, yAlpha)
     enddo
 
 end subroutine
-
-! real(KREAL) function CalcStep(yOld, yCurrent, lambda, h) result(yNew)
-!     real(KREAL) :: yOld, yCurrent, lambda, h
-!     ! PotentiAL staat er nog niet in!!!
-!     yNew = -1*yOld + (h**2)*(lambda + 2/(h**2))*yCurrent
-! end function
     
 end module ShootingAlgorithmModule

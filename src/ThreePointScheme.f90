@@ -66,7 +66,7 @@ subroutine ThreePointScheme(grid1, eigenVectors, eigenValues)
     enddo
     close(14)
 
-    ! ! deallocate the matrices
+    ! deallocate the matrices
     deallocate(matrixS, matrixV, matrixL)
 
 end subroutine
