@@ -3,6 +3,7 @@ module ShootingAlgorithmModule
     use ThreePointSchemeModule
     use NumberKinds
     use integration_module
+    use PotentialsModule
     implicit none
     save
     private 
@@ -20,7 +21,7 @@ subroutine Shooting()
     type (doubleArray) :: yAlpha
     real(KREAL), allocatable :: eigenVectors(:,:)
     real(KREAL), allocatable :: eigenValues(:)
-    real(KREAL) :: alpha, norm
+    real(KREAL) :: alpha, norm, correction
     integer(KINT) :: xMatch, i
 
     ! make grid
@@ -35,8 +36,11 @@ subroutine Shooting()
     allocate(yAlpha%in(gridCalc%numberOfPoints))
     yAlpha%in = 0
 
-    alpha = eigenValues(1)
+    alpha = eigenValues(2)
 
+! do i = 1, 2
+    yAlpha%in = 0
+    yAlpha%out = 0
     call Outwards(gridCalc, eigenVectors(:,1), alpha, yAlpha%out)
     call Inwards(gridCalc, eigenVectors(:,1), alpha, yAlpha%in)
     
@@ -46,41 +50,53 @@ subroutine Shooting()
 
     norm = norm2(yAlpha%in)
     yAlpha%in = yAlpha%in/norm
+ 
+    correction = deltaLambda(gridCalc, yAlpha, xMatch)
+
+    alpha = alpha - correction
+
+!     ! check for convergence
+!     if (abs(correction) < 1E-10) then 
+!         print *, "CONVERGED"
+!         exit
+!     endif
+! enddo
 
     open(15, file="yAlpha.txt", action="write")
     do i = 1, size(yAlpha%in)
         write(15, *) yAlpha%out(i), yAlpha%in(i)
     enddo
     close(15)
-    
-    call deltaLambda(gridCalc, yAlpha, xMatch)
 
     deallocate(eigenVectors, eigenValues)
     call Delete(gridCalc)
 
 end subroutine
 
-subroutine deltaLambda(grid1, yAlpha, xMatch)
+real(KREAL) function deltaLambda(grid1, yAlpha, xMatch)
     type (Grid) :: grid1
     type (doubleArray) :: yAlpha
     integer(KINT) :: xMatch
-    real(KREAL) :: yAlphaInDeriv, yAlphaOutDeriv, partA, partB
+    real(KREAL) :: yAlphaInDeriv, yAlphaOutDeriv, partA, partB, partC
 
     ! calculate derivative in
-    yAlphaInDeriv = (yAlpha%in(xMatch + 1) - yAlpha%in(xMatch - 1))/2*grid1%h
+    yAlphaInDeriv = (yAlpha%in(xMatch + 1) - yAlpha%in(xMatch - 1))/(2*grid1%h)
     ! calculate derivative out
-    yAlphaOutDeriv = (yAlpha%out(xMatch + 1) - yAlpha%out(xMatch - 1))/2*grid1%h
-    print *, yAlphaInDeriv, yAlphaOutDeriv, yAlpha%in(xMatch), yAlpha%out(xMatch)
+    yAlphaOutDeriv = (yAlpha%out(xMatch + 1) - yAlpha%out(xMatch - 1))/(2*grid1%h)
 
     partA = 0.5*(yAlphaInDeriv/yAlpha%in(xMatch) - yAlphaOutDeriv/yAlpha%out(xMatch))
 
-    ! moet nog ergens een kwadraat in de integraal
-    ! call Newton_cotes(yAlpha%out, grid1%h, 0, xMatch, partB)
-    ! partB = partB
+    partB = 0
+    call Newton_cotes((yAlpha%out)**2, grid1%h, 0, xMatch, partB)
+    partB = partB/(yAlpha%out(xMatch)**2)
 
-    print *, partA
+    partC = 0
+    call Newton_cotes((yAlpha%in)**2, grid1%h, xMatch, grid1%numberOfPoints, partC)
+    partC = partC/(yAlpha%in(xMatch)**2)
 
-end subroutine
+    deltaLambda = partA * 1/(partB + partC)
+
+end function
 
 subroutine Outwards(grid1, eigenVectorLambda, lambda, yAlpha)
     type(Grid) :: grid1

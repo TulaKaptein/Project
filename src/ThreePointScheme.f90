@@ -47,8 +47,10 @@ subroutine ThreePointScheme(grid1, eigenVectors, eigenValues)
     ! diagonalize matrix L
     call diagonalize(matrixL, eigenVectors, eigenValues)
 
-    ! function that checks whether it's negative
-    ! eigenVectors = -1*eigenVectors
+    ! checks whether the eigenvectors are negative
+    if (eigenVectors(1,1) > eigenVectors(1,2)) then
+        eigenVectors = -1*eigenVectors
+    endif
 
     open(13, file="eigenValues.txt", action="write")
     write(13, *) "eigenValues"
@@ -60,7 +62,7 @@ subroutine ThreePointScheme(grid1, eigenVectors, eigenValues)
     open(14, file="eigenVectors.txt", action="write")
     write(14,*) "eigenVectors"
     do i = 1, size(eigenVectors, 1)
-        write(14, *) eigenVectors(i, 1)
+        write(14, *) eigenVectors(i, 2)
     enddo
     close(14)
 
