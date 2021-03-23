@@ -36,7 +36,7 @@ subroutine ThreePointScheme(grid1, eigenVectors, eigenValues)
     enddo
 
     ! calculate matrix L
-    matrixL = (-1/(grid1%h)**2)*matrixS + matrixV
+    matrixL = (-1/(2*(grid1%h)**2))*matrixS + matrixV
 
     ! allocate and initialize the eigenvectors and -values
     allocate(eigenVectors(grid1%numberOfPoints, grid1%numberOfPoints))
@@ -62,7 +62,7 @@ subroutine ThreePointScheme(grid1, eigenVectors, eigenValues)
     open(14, file="eigenVectors.txt", action="write")
     write(14,*) "eigenVectors"
     do i = 1, size(eigenVectors, 1)
-        write(14, *) eigenVectors(i, 2)
+        write(14, *) eigenVectors(i, :)
     enddo
     close(14)
 
