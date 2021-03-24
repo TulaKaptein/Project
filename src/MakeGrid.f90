@@ -1,11 +1,12 @@
 module MakeGridModule
     use NumberKinds
+    use Tools
     implicit none
     save
     private 
-    public :: New, Grid, Delete
+    public :: New, GridType, Delete
 
-    type Grid
+    type GridType
         real(KREAL), allocatable :: gridPoints(:)
         integer(KINT) :: numberOfPoints
         real(KREAL) :: interval(2) ! with interval(1) = lowerbound, interval(2) = upperbound
@@ -21,10 +22,9 @@ module MakeGridModule
 contains
 
 subroutine NewPrivate(self, numberOfPoints, interval)
-    type (Grid) :: self
+    type (GridType) :: self
     integer(KINT), intent(in) :: numberOfPoints
     real(KREAL), intent(in) :: interval(2)
-    real (KREAL) :: h
     integer (KINT) :: i
 
     ! save the number of gridpoints and the interval
@@ -32,21 +32,20 @@ subroutine NewPrivate(self, numberOfPoints, interval)
     self%interval = interval
 
     ! allocate the grid points array and initialize
-    allocate(self%gridPoints(numberOfPoints))
-    self%gridPoints = 0
+    call AllocAndInit(self%gridPoints, self%numberOfPoints)
 
-    ! calculate h (could be a function!!)
-    h = (self%interval(2)-self%interval(1))/self%numberOfPoints
+    ! calculate h
+    self%h = CalculateH(self)
 
     self%gridPoints(1) = self%interval(1)
 
     do i = 2, self%numberOfPoints
-        self%gridPoints(i) = self%gridpoints(i-1) + (i-1)*h
+        self%gridPoints(i) = self%gridpoints(i-1) + (i-1)*self%h
     enddo
 end subroutine
 
 subroutine NewPrivateUserInput(self)
-    type(Grid) :: self
+    type(GridType) :: self
     integer(KINT) :: i
 
     ! ask for user input
@@ -55,12 +54,11 @@ subroutine NewPrivateUserInput(self)
     print *, "Put in the interval"
     read *, self%interval(:)
 
-        ! allocate the grid points array and initialize
-    allocate(self%gridPoints(self%numberOfPoints))
-    self%gridPoints = 0
+    ! allocate the grid points array and initialize
+    call AllocAndInit(self%gridPoints, self%numberOfPoints)
 
-    ! calculate h (could be a function!!)
-    self%h = (self%interval(2)-self%interval(1))/self%numberOfPoints
+    ! calculate h
+    self%h = CalculateH(self)
 
     self%gridPoints(1) = self%interval(1)
 
@@ -69,8 +67,14 @@ subroutine NewPrivateUserInput(self)
     enddo
 end subroutine
 
+real(KREAL) function CalculateH(self)
+    type(GridType) :: self
+
+    CalculateH = (self%interval(2)-self%interval(1))/self%numberOfPoints
+end function
+
 subroutine Delete(self)
-    type(Grid) :: self
+    type(GridType) :: self
 
     deallocate(self%gridPoints)
 end subroutine
