@@ -4,6 +4,7 @@ module ShootingAlgorithmModule
     use NumberKinds
     use integration_module
     use PotentialsModule
+    use Tools
     implicit none
     save
     private 
@@ -18,148 +19,152 @@ module ShootingAlgorithmModule
 contains
 
 subroutine Shooting()
-    type (Grid) :: gridCalc
+    type(ThreePointSchemeType) :: TPS
     type (tripleArray), allocatable :: yAlpha(:)
-    real(KREAL), allocatable :: eigenVectors(:,:)
-    real(KREAL), allocatable :: eigenValues(:)
-    real(KREAL) :: norm, correction, lambda
-    integer(KINT) :: xMatch, i, ii, alpha
+    real(KREAL) :: lambda
+    integer(KINT) :: xMatch, alpha
 
-    ! make grid
-    call New(gridCalc)
-    ! calculate three point scheme
-    call ThreePointScheme(gridCalc, eigenVectors, eigenValues)
+    ! start with the three-point scheme
+    call NewTPS(TPS, "ParticleInBox")
+    call RunTPS(TPS)
 
-    ! allocate yAlpha array
-    allocate(yAlpha(size(eigenValues)))
+    ! allocate yAlpha
+    allocate(yAlpha(size(TPS%eigenValues)))
 
-! for each value of lambda
-do i = 1, size(eigenValues)
+    ! for each eigenvalue/alpha
+    do alpha = 1, size(yAlpha)
+        ! run the shooting algorithm
+        xMatch = TPS%grid%numberOfPoints/2
+        call AllocAndInit(yAlpha(alpha)%out, TPS%grid%numberOfPoints)
+        call AllocAndInit(yAlpha(alpha)%in, TPS%grid%numberOfPoints)
+        call AllocAndInit(yAlpha(alpha)%final, TPS%grid%numberOfPoints)
 
-    xMatch = gridCalc%numberOfPoints/2
-    allocate(yAlpha(i)%out(gridCalc%numberOfPoints))
-    yAlpha(i)%out = 0
-    allocate(yAlpha(i)%in(gridCalc%numberOfPoints))
-    yAlpha(i)%in = 0
-    allocate(yAlpha(i)%final(gridCalc%numberOfPoints))
-    yAlpha(i)%final = 0
+        lambda = TPS%eigenValues(alpha)
 
-    alpha = i
-    lambda = eigenValues(alpha)
+        call ShootingLoopAlpha(TPS%grid, yAlpha(alpha), TPS%eigenVectors(:,alpha),lambda)
 
-    do
-        yAlpha(i)%in = 0
-        yAlpha(i)%out = 0
-        call Outwards(gridCalc, eigenVectors(:,alpha), lambda, yAlpha(i)%out)
-        call Inwards(gridCalc, eigenVectors(:,alpha), lambda, yAlpha(i)%in)
-        
+        ! save the final solutions
+        yAlpha(alpha)%final(:xMatch) = yAlpha(alpha)%out(:xMatch)
+        yAlpha(alpha)%final(xMatch + 1:) = yAlpha(alpha)%in(xMatch + 1:)
+
         ! normalize the solutions
-        norm = norm2(yAlpha(i)%out)
-        yAlpha(i)%out = yAlpha(i)%out/norm 
+        call Normalize(yAlpha(alpha)%final)
 
-        norm = norm2(yAlpha(i)%in)
-        yAlpha(i)%in = yAlpha(i)%in/norm
-    
-        correction = deltaLambda(gridCalc, yAlpha(i), xMatch)
-        print *, correction
+        ! call WriteToFile(yAlpha(alpha)%final, "yAlpha")
 
-        lambda = lambda - correction
-
-        ! check for convergence
-        if (abs(correction) < 1E-10) then 
-            print *, "CONVERGED"
-            exit
-        endif
     enddo
 
-    ! save the final solutions
-    yAlpha(i)%final(:xMatch) = yAlpha(i)%out(0:xMatch)
-    yAlpha(i)%final(xMatch:) = yAlpha(i)%in(xMatch:)
-
-    ! normalize the solutions
-    norm = norm2(yAlpha(i)%final)
-    yAlpha(i)%final = yAlpha(i)%final/norm
-
-enddo
-
-    ! ! print out the values for all eigenvalues
-    ! open(15, file="yAlpha.txt", action="write")
-    !     ! do ii = 1, size(yAlpha(1)%final)
-    !     !     write(15, *) yAlpha(1:)%final(ii)
-    !     ! enddo
-    ! close(15)
-
-    ! call an outputwriter
+    call WriteResults(yAlpha)
 
     ! deallocate everything
-    deallocate(eigenVectors, eigenValues)
-    call Delete(gridCalc)
-
+    deallocate(yAlpha)
+    ! delete three-point scheme ADT
+    call DeleteTPS(TPS)
 end subroutine
 
-real(KREAL) function deltaLambda(grid1, yAlpha, xMatch)
-    type (Grid) :: grid1
+real(KREAL) function deltaLambda(grid, yAlpha, xMatch)
+    type (GridType) :: grid
     type (tripleArray) :: yAlpha
     integer(KINT) :: xMatch
     real(KREAL) :: yAlphaInDeriv, yAlphaOutDeriv, partA, partB, partC
 
     ! calculate derivative in
-    yAlphaInDeriv = (yAlpha%in(xMatch + 1) - yAlpha%in(xMatch - 1))/(2*grid1%h)
+    yAlphaInDeriv = (yAlpha%in(xMatch + 1) - yAlpha%in(xMatch - 1))/(2*grid%h)
     ! calculate derivative out
-    yAlphaOutDeriv = (yAlpha%out(xMatch + 1) - yAlpha%out(xMatch - 1))/(2*grid1%h)
+    yAlphaOutDeriv = (yAlpha%out(xMatch + 1) - yAlpha%out(xMatch - 1))/(2*grid%h)
 
     partA = 0.5*(yAlphaInDeriv/yAlpha%in(xMatch) - yAlphaOutDeriv/yAlpha%out(xMatch))
 
     partB = 0
-    call Newton_cotes((yAlpha%out)**2, grid1%h, 0, xMatch, partB)
+    call Newton_cotes((yAlpha%out)**2, grid%h, 0, xMatch, partB)
     partB = partB/(yAlpha%out(xMatch)**2)
 
     partC = 0
-    call Newton_cotes((yAlpha%in)**2, grid1%h, xMatch, grid1%numberOfPoints, partC)
+    call Newton_cotes((yAlpha%in)**2, grid%h, xMatch, grid%numberOfPoints, partC)
     partC = partC/(yAlpha%in(xMatch)**2)
 
     deltaLambda = partA * 1/(partB + partC)
 
 end function
 
-subroutine Outwards(grid1, eigenVectorLambda, lambda, yAlpha)
-    type(Grid) :: grid1
+subroutine Outwards(grid, eigenVectorLambda, lambda, yAlpha)
+    type(GridType) :: grid
     real(KREAL) :: eigenVectorLambda(:)
     real(KREAL) :: lambda
     real(KREAL) :: yAlpha(:)
     integer(KINT) :: xMatch, numberOfPoints, i
     real(KREAL) :: potential = 0
 
-    xMatch = grid1%numberOfPoints/2
-    numberOfPoints = grid1%numberOfPoints
+    xMatch = grid%numberOfPoints/2
+    numberOfPoints = grid%numberOfPoints
 
     yAlpha(1) = eigenVectorLambda(1)
     yAlpha(2) = eigenVectorLambda(2)
 
-    do i = 3, numberOfPoints
-        yAlpha(i) = -yAlpha(i-2) + 2*grid1%h**2*(potential - lambda + 1/(grid1%h)**2)*yAlpha(i-1)
+    do i = 3, xMatch + 1
+        yAlpha(i) = -yAlpha(i-2) + 2*grid%h**2*(potential - lambda + 1/(grid%h)**2)*yAlpha(i-1)
     enddo
 
 end subroutine
 
-subroutine Inwards(grid1, eigenVectorLambda, lambda, yAlpha)
-    type(Grid) :: grid1
+subroutine Inwards(grid, eigenVectorLambda, lambda, yAlpha)
+    type(GridType) :: grid
     real(KREAL) :: eigenVectorLambda(:)
     real(KREAL) :: lambda
     real(KREAL) :: yAlpha(:)
     integer(KINT) :: xMatch, numberOfPoints, i
     real(KREAL) :: potential = 0
 
-    xMatch = grid1%numberOfPoints/2
-    numberOfPoints = grid1%numberOfPoints
+    xMatch = grid%numberOfPoints/2
+    numberOfPoints = grid%numberOfPoints
 
     yAlpha(numberOfPoints) = eigenVectorLambda(numberOfPoints)
     yAlpha(numberOfPoints - 1) = eigenVectorLambda(numberOfPoints-1)
 
-    do i = numberOfPoints - 2, 1, -1
-        yAlpha(i) = -yAlpha(i+2) + 2*grid1%h**2*(potential - lambda + 1/(grid1%h)**2)*yAlpha(i+1)
+    do i = numberOfPoints - 2, xMatch - 1, -1
+        yAlpha(i) = -yAlpha(i+2) + 2*grid%h**2*(potential - lambda + 1/(grid%h)**2)*yAlpha(i+1)
     enddo
 
+end subroutine
+
+subroutine ShootingLoopAlpha(grid, y, eigenVector, lambda)
+    type(GridType) :: grid
+    type(tripleArray) :: y
+    real(KREAL) :: eigenVector(:)
+    real(KREAL) :: lambda
+    real(KREAL) :: correction
+
+    do  
+        y%in = 0
+        y%out = 0
+        call Outwards(grid, eigenVector, lambda, y%out)
+        call Inwards(grid, eigenVector, lambda, y%in)
+
+        call Normalize(y%in)
+        call Normalize(y%out)
+
+        correction = deltaLambda(grid, y, grid%numberOfPoints/2)
+        print *, correction
+
+        lambda = lambda - correction
+
+        if (abs(correction) < 1e-15) then
+            print *, "CONVERGED"
+            exit
+        endif
+    enddo
+end subroutine
+
+subroutine WriteResults(results)
+    type(tripleArray) :: results(:)
+    real(KREAL) :: matrixResults(size(results),size(results))
+    integer(KINT) :: i
+
+    do i = 1, size(results)
+        matrixResults(:,i) = results(i)%final(:)
+    enddo
+
+    call WriteToFile(matrixResults, "Results")
 end subroutine
     
 end module ShootingAlgorithmModule

@@ -3,7 +3,7 @@ module Tools
     implicit none
     save
     private 
-    public :: AllocAndInit, WriteToFile
+    public :: AllocAndInit, WriteToFile, Normalize
 
     interface AllocAndInit
         module procedure AllocAndInitArray
@@ -69,6 +69,12 @@ subroutine WriteMatrix(matrix, name)
     enddo
 
     close(iu)
+end subroutine
+
+subroutine Normalize(array)
+    real(KREAL) :: array(:)
+
+    array = array/norm2(array)
 end subroutine
 
 end module Tools
