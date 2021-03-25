@@ -39,7 +39,7 @@ subroutine Shooting()
         call AllocAndInit(yAlpha(alpha)%in, TPS%grid%numberOfPoints)
         call AllocAndInit(yAlpha(alpha)%final, TPS%grid%numberOfPoints)
 
-        lambda = TPS%eigenValues(alpha)
+        lambda = TPS%eigenValues(alpha) !- 0.005
 
         call ShootingLoopAlpha(TPS%grid, yAlpha(alpha), TPS%eigenVectors(:,alpha),lambda)
 
@@ -50,11 +50,11 @@ subroutine Shooting()
         ! normalize the solutions
         call Normalize(yAlpha(alpha)%final)
 
-        ! call WriteToFile(yAlpha(alpha)%final, "yAlpha")
-
     enddo
 
     call WriteResults(yAlpha)
+
+    ! deallocate the three arrays of each yAlpha(i)
 
     ! deallocate everything
     deallocate(yAlpha)
@@ -99,6 +99,7 @@ subroutine Outwards(grid, eigenVectorLambda, lambda, yAlpha)
     numberOfPoints = grid%numberOfPoints
 
     yAlpha(1) = eigenVectorLambda(1)
+    ! yAlpha(1) = 0
     yAlpha(2) = eigenVectorLambda(2)
 
     do i = 3, xMatch + 1
@@ -119,6 +120,7 @@ subroutine Inwards(grid, eigenVectorLambda, lambda, yAlpha)
     numberOfPoints = grid%numberOfPoints
 
     yAlpha(numberOfPoints) = eigenVectorLambda(numberOfPoints)
+    ! yAlpha(numberOfPoints) = 0
     yAlpha(numberOfPoints - 1) = eigenVectorLambda(numberOfPoints-1)
 
     do i = numberOfPoints - 2, xMatch - 1, -1

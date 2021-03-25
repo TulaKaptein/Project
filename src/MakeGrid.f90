@@ -65,6 +65,7 @@ subroutine NewPrivateUserInput(self)
     do i = 2, self%numberOfPoints
         self%gridPoints(i) = self%gridpoints(1) + (i-1)*self%h
     enddo
+
 end subroutine
 
 real(KREAL) function CalculateH(self)

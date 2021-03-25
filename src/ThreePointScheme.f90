@@ -47,19 +47,19 @@ subroutine RunTPS(self)
     ! fill matrix S 
     forall (i = 1:size(matrixS, 1)) 
         matrixS(i,i) = -2
+    endforall
+    do i = 1, size(matrixS, 1) - 1
         matrixS(i, i + 1) = 1
         matrixS(i + 1, i) = 1
-    endforall
+    enddo
 
-    ! fill matrix V with the correct potential
-    if (self%potential == "ParticleInBox") then 
-        do i = 1, size(matrixV, 1)
-            matrixV(i,i) = ParticleInBox(self%grid%gridPoints(i), (self%grid%interval(1))*2)
-        enddo
+    ! fill matrix V
+    if (self%potential /= "ParticleInBox") then
+        print *, "different potential"
     endif
 
     ! calculate matrix L and diagonalize
-    matrixL = (-1/(2*(self%grid%h)**2))*matrixS + matrixV
+    matrixL = -matrixS/(2*self%grid%h**2) + matrixV
     call diagonalize(matrixL, self%eigenVectors, self%eigenValues)
 
     ! checks whether the eigenvectors are negative and corrects

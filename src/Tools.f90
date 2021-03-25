@@ -44,7 +44,7 @@ subroutine WriteArray(array, name)
     ! write output with a certain formatstring
     write(iu, *) name
     do i = 1, size(array)
-        write(iu, "(f8.3)") array(i)
+        write(iu, "(f8.4)") array(i)
     enddo
 
     close(iu)
@@ -62,7 +62,7 @@ subroutine WriteMatrix(matrix, name)
     write(iu,*) name
 
     write(formatString, "(i10)") size(matrix,2)
-    formatString = "("//trim(formatString)//"f8.3)"
+    formatString = "("//trim(formatString)//"f8.4)"
 
     do i = 1, size(matrix, 1)
         write(iu, formatString) matrix(i,:)
