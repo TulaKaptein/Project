@@ -46,8 +46,8 @@ subroutine NewPrivate(self, numberOfPoints, interval)
     ! calculate h
     self%h = CalculateH(self)
 
+    ! calculate the gridpoints
     self%gridPoints(1) = self%interval(1)
-
     do i = 2, self%numberOfPoints
         self%gridPoints(i) = self%gridpoints(i-1) + (i-1)*self%h
     enddo
@@ -60,8 +60,16 @@ subroutine NewPrivateUserInput(self)
     ! ask for user input
     print *, "Put in number of gridpoints"
     read *, self%numberOfPoints
+    if (self%numberOfPoints < 0) then
+        print *, "ERROR: Wrong input for the number of gridpoints"
+        stop 
+    endif
     print *, "Put in the interval"
-    read *, self%interval(:)
+    read *, self%interval(:)   
+    if (abs(self%interval(1)) /= abs(self%interval(2)).or.self%interval(1)>=self%interval(2)) then
+        print *, "ERROR: Wrong input for the interval"
+        stop 
+    endif
 
     ! allocate the grid points array and initialize
     call AllocAndInit(self%gridPoints, self%numberOfPoints)
@@ -69,8 +77,8 @@ subroutine NewPrivateUserInput(self)
     ! calculate h
     self%h = CalculateH(self)
 
+    ! calculate the gridpoints
     self%gridPoints(1) = self%interval(1)
-
     do i = 2, self%numberOfPoints
         self%gridPoints(i) = self%gridpoints(1) + (i-1)*self%h
     enddo

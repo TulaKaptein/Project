@@ -47,7 +47,6 @@ subroutine WriteArray(array, name)
 
     open(newunit=iu, file=trim(name)//".txt", action="write")
 
-    ! write output with a certain formatstring
     write(iu, *) name
     do i = 1, size(array)
         write(iu, "(f8.4)") array(i)
@@ -64,13 +63,13 @@ subroutine WriteMatrix(matrix, name)
     character(len=50) :: formatString 
     integer(KINT) :: i, iu 
 
-    open(newunit=iu, file=trim(name)//".txt", action="write")
-
-    write(iu,*) name
-
+    ! make a formatstring for the dimension of the matrix
     write(formatString, "(i10)") size(matrix,2)
     formatString = "("//trim(formatString)//"f8.4)"
 
+    open(newunit=iu, file=trim(name)//".txt", action="write")
+
+    write(iu,*) name
     do i = 1, size(matrix, 1)
         write(iu, formatString) matrix(i,:)
     enddo

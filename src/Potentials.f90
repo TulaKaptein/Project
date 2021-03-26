@@ -1,15 +1,16 @@
 !
-! Module with two different potentials
+! Module with two different potentials: Particle in a Box and Gaussian Potential Well
 !
 module PotentialsModule
     use NumberKinds
     implicit none
     save
     private 
-    public :: ParticleInBox, GaussianPotWell, HarmOsc
+    public :: ParticleInBox, GaussianPotWell
     
 contains
 
+! function that calculates the the Particle in a Box potential for a certain x-value
 real(KREAL) function ParticleInBox(x, L) result(y)
     real(KREAL), intent(in) :: x, L
 
@@ -23,22 +24,12 @@ real(KREAL) function ParticleInBox(x, L) result(y)
 
 end function
 
+! function that calculates the Gaussion potential well potential for a certain x-value
 real(KREAL) function GaussianPotWell(x, V0, alpha) result(y)
     real (KREAL), intent(in) :: x, V0, alpha
 
     y = -V0*exp(-alpha*x**2)
 
-end function
-
-real(KREAL) function HarmOsc(x, springConstant, L) result(y)
-    real(KREAL), intent(in) :: x, springConstant, L
-
-    if (abs(x) <= abs(L/2)) then
-        y = 0.5*springConstant*x**2
-    else
-        !ERROR
-        y = 1000000
-    endif
 end function
     
 end module PotentialsModule

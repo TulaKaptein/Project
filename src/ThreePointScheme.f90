@@ -1,3 +1,7 @@
+!
+! Module that uses the three-point scheme to calculate eigenvectors and eigenvalues
+! for a 1D Schrödinger equation with a certain potential
+!
 module ThreePointSchemeModule
     use NumberKinds
     use MakeGridModule
@@ -88,8 +92,9 @@ subroutine RunTPS(self)
     type(ThreePointSchemeType) :: self
     real(KREAL), allocatable :: matrixS(:,:), matrixV(:,:), matrixL(:,:)
     integer(KINT) :: i, dimens
-    real(KREAL) :: h, l, x, v0, alpha, springConstant
+    real(KREAL) :: h, l, x, v0, alpha
 
+    ! get the dimension of the matrices and h
     dimens = GetDimension(self%grid)
     h = GetH(self%grid)
 
@@ -123,21 +128,13 @@ subroutine RunTPS(self)
             alpha = 0.1
             matrixV(i,i) = GaussianPotWell(x, v0, alpha)
         enddo
-    else if(self%potential == "HarmOsc") then
-        print *, "Harmonic oscillator is used"
-        l = abs(GetLowBound(self%grid))*2
-        do i = 1, size(matrixV, 1)
-            x = GetGridPoint(self%grid, i)
-            springConstant = 0.5
-            matrixV(i,i) = HarmOsc(x, springConstant, l)
-        enddo
     endif
 
     ! calculate matrix L and diagonalize
     matrixL = -matrixS/(2*h**2) + matrixV
     call diagonalize(matrixL, self%eigenVectors, self%eigenValues)
 
-    ! checks whether the eigenvectors are negative and corrects
+    ! check whether the eigenvectors are negative and corrects
     if (self%eigenVectors(1,1) > self%eigenVectors(2,1)) then
         self%eigenVectors = -1*self%eigenVectors
     endif
