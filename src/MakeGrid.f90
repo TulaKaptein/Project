@@ -1,10 +1,17 @@
+!
+! Module that makes, initializes and deletes a grid with 
+! functions to access the different variables of a grid
+!
 module MakeGridModule
     use NumberKinds
     use Tools
     implicit none
     save
+
     private 
-    public :: New, GridType, Delete
+    public :: GridType
+    public :: New, Delete
+    public :: GetGridPoint, GetDimension, GetLowBound, GetUpBound, GetH
 
     type GridType
         real(KREAL), allocatable :: gridPoints(:)
@@ -17,10 +24,12 @@ module MakeGridModule
         module procedure NewPrivate
         module procedure NewPrivateUserInput
     end interface
-
-    
+  
 contains
 
+!
+! Initialize a new grid and delete a grid
+!
 subroutine NewPrivate(self, numberOfPoints, interval)
     type (GridType) :: self
     integer(KINT), intent(in) :: numberOfPoints
@@ -68,16 +77,58 @@ subroutine NewPrivateUserInput(self)
 
 end subroutine
 
+subroutine Delete(self)
+    type(GridType) :: self
+
+    deallocate(self%gridPoints)
+end subroutine
+
+!
+! Accessors
+!
+function GetGridPoint(self, index)
+    type(GridType) :: self 
+    integer(KINT) :: index
+    real(KREAL) :: GetGridPoint 
+
+    GetGridPoint = self%gridPoints(index)
+end function
+
+function GetDimension(self)
+    type(GridType) :: self
+    integer(KINT) :: GetDimension
+
+    GetDimension = self%numberOfPoints
+end function
+
+function GetLowBound(self)
+    type(GridType) :: self
+    real(KREAL) :: GetLowBound
+
+    GetLowBound = self%interval(1)
+end function
+
+function GetUpBound(self)
+    type(GridType) :: self
+    real(KREAL) :: GetUpBound
+
+    GetUpBound = self%interval(2)
+end function
+
+function GetH(self)
+    type(GridType) :: self
+    real(KREAL) :: GetH
+
+    GetH = self%h
+end function
+
+!
+! Other routines
+!
 real(KREAL) function CalculateH(self)
     type(GridType) :: self
 
     CalculateH = (self%interval(2)-self%interval(1))/self%numberOfPoints
 end function
 
-subroutine Delete(self)
-    type(GridType) :: self
-
-    deallocate(self%gridPoints)
-end subroutine
-    
 end module MakeGridModule

@@ -6,8 +6,11 @@ module ThreePointSchemeModule
     use Tools
     implicit none
     save
+
     private 
-    public :: NewTPS, RunTPS, DeleteTPS, ThreePointSchemeType
+    public :: ThreePointSchemeType
+    public :: NewTPS, RunTPS, DeleteTPS
+    public :: GetGrid, GetCertainVector, GetCertainValue, GetPotential
 
     type ThreePointSchemeType
         type(GridType) :: grid
@@ -18,31 +21,82 @@ module ThreePointSchemeModule
     
 contains
 
-! initialize a new three-point scheme 
+!
+! Initialize a new three-point scheme and delete
+!
 subroutine NewTPS(self, potential)
     type(ThreePointSchemeType) :: self
     character(len=*) :: potential
+    integer(KINT) :: dimens
 
     ! initialize the grid
     call New(self%grid)
 
+    dimens = GetDimension(self%grid)
+
     ! initialize the TPS
-    call AllocAndInit(self%eigenVectors, self%grid%numberOfPoints)
-    call AllocAndInit(self%eigenValues, self%grid%numberOfPoints)
+    call AllocAndInit(self%eigenVectors, dimens)
+    call AllocAndInit(self%eigenValues, dimens)
     self%potential = potential
 
 end subroutine
 
-! run the three-point scheme and write out the results to files
+subroutine DeleteTPS(self)
+    type(ThreePointSchemeType) :: self
+
+    call Delete(self%grid)
+    deallocate(self%eigenValues, self%eigenVectors)
+end subroutine
+
+!
+! Accessors
+!
+function GetGrid(self)
+    type(ThreePointSchemeType) :: self
+    type(GridType) :: GetGrid 
+
+    GetGrid = self%grid 
+end function
+
+function GetCertainVector(self, index)
+    type(ThreePointSchemeType) :: self
+    integer(KINT) :: index
+    real(KREAL) :: GetCertainVector(self%grid%numberOfPoints)
+
+    GetCertainVector = self%eigenVectors(:,index)
+end function
+
+function GetCertainValue(self, index)
+    type(ThreePointSchemeType) :: self
+    integer(KINT) :: index
+    real(KREAL) :: GetCertainValue
+
+    GetCertainValue = self%eigenValues(index)
+end function
+
+function GetPotential(self)
+    type(ThreePointSchemeType) :: self
+    character(50) :: GetPotential
+
+    GetPotential = self%potential 
+end function
+
+!
+! Run the three-point scheme and write out the results to files
+!
 subroutine RunTPS(self)
     type(ThreePointSchemeType) :: self
     real(KREAL), allocatable :: matrixS(:,:), matrixV(:,:), matrixL(:,:)
-    integer(KINT) :: i
+    integer(KINT) :: i, dimens
+    real(KREAL) :: h, l, x, v0, alpha, springConstant
+
+    dimens = GetDimension(self%grid)
+    h = GetH(self%grid)
 
     ! allocate and initialize the matrices
-    call AllocAndInit(matrixS, self%grid%numberOfPoints)
-    call AllocAndInit(matrixV, self%grid%numberOfPoints)
-    call AllocAndInit(matrixL, self%grid%numberOfPoints)
+    call AllocAndInit(matrixS, dimens)
+    call AllocAndInit(matrixV, dimens)
+    call AllocAndInit(matrixL, dimens)
 
     ! fill matrix S 
     forall (i = 1:size(matrixS, 1)) 
@@ -54,12 +108,33 @@ subroutine RunTPS(self)
     enddo
 
     ! fill matrix V
-    if (self%potential /= "ParticleInBox") then
-        print *, "different potential"
+    if (self%potential == "ParticleInBox") then
+        print *, "Particle in a box is used"
+        l = abs(GetLowBound(self%grid))*2
+        do i = 1, size(matrixV, 1)
+            x = GetGridPoint(self%grid, i)
+            matrixV(i,i) = ParticleInBox(x, l)
+        enddo
+    else if(self%potential == "GaussianPotWell") then
+        print *, "Gaussian potential well is used"
+        do i = 1, size(matrixV, 1)
+            x = GetGridPoint(self%grid, i)
+            v0 = 3
+            alpha = 0.1
+            matrixV(i,i) = GaussianPotWell(x, v0, alpha)
+        enddo
+    else if(self%potential == "HarmOsc") then
+        print *, "Harmonic oscillator is used"
+        l = abs(GetLowBound(self%grid))*2
+        do i = 1, size(matrixV, 1)
+            x = GetGridPoint(self%grid, i)
+            springConstant = 0.5
+            matrixV(i,i) = HarmOsc(x, springConstant, l)
+        enddo
     endif
 
     ! calculate matrix L and diagonalize
-    matrixL = -matrixS/(2*self%grid%h**2) + matrixV
+    matrixL = -matrixS/(2*h**2) + matrixV
     call diagonalize(matrixL, self%eigenVectors, self%eigenValues)
 
     ! checks whether the eigenvectors are negative and corrects
@@ -74,14 +149,6 @@ subroutine RunTPS(self)
     ! deallocate the matrices
     deallocate(matrixS, matrixV, matrixL)
 
-end subroutine
-
-! delete the three-point scheme
-subroutine DeleteTPS(self)
-    type(ThreePointSchemeType) :: self
-
-    call Delete(self%grid)
-    deallocate(self%eigenValues, self%eigenVectors)
 end subroutine
   
 end module ThreePointSchemeModule

@@ -1,3 +1,6 @@
+!
+! Module with general tools used throughout the program
+!
 module Tools
     use NumberKinds
     implicit none
@@ -17,6 +20,7 @@ module Tools
     
 contains
 
+! allocates an array and initializes it to 0
 subroutine AllocAndInitArray(array, dimension)
     real(KREAL), allocatable :: array(:)
     integer(KINT) :: dimension
@@ -26,6 +30,7 @@ subroutine AllocAndInitArray(array, dimension)
 
 end subroutine
 
+! allocates a matrix and initializes it to 0
 subroutine AllocAndInitMatrix(matrix, dimension)
     real(KREAL), allocatable :: matrix(:,:)
     integer(KINT) :: dimension
@@ -34,6 +39,7 @@ subroutine AllocAndInitMatrix(matrix, dimension)
     matrix = 0
 end subroutine
 
+! writes an array to a textfile with the given name
 subroutine WriteArray(array, name)
     real(KREAL) :: array(:)
     character(len=*) :: name
@@ -51,6 +57,7 @@ subroutine WriteArray(array, name)
 
 end subroutine
 
+! writes a matrix to a textfile with the given name
 subroutine WriteMatrix(matrix, name)
     real(KREAL) :: matrix(:,:)
     character(len=*) :: name
@@ -71,6 +78,7 @@ subroutine WriteMatrix(matrix, name)
     close(iu)
 end subroutine
 
+! normalizes an array
 subroutine Normalize(array)
     real(KREAL) :: array(:)
 
