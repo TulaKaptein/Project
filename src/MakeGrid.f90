@@ -51,6 +51,9 @@ subroutine NewPrivate(self, numberOfPoints, interval)
     do i = 2, self%numberOfPoints
         self%gridPoints(i) = self%gridpoints(i-1) + (i-1)*self%h
     enddo
+
+    call WriteToFile(self%gridPoints, "Gridpoints")
+
 end subroutine
 
 subroutine NewPrivateUserInput(self)
@@ -82,6 +85,8 @@ subroutine NewPrivateUserInput(self)
     do i = 2, self%numberOfPoints
         self%gridPoints(i) = self%gridpoints(1) + (i-1)*self%h
     enddo
+
+    call WriteToFile(self%gridPoints, "Gridpoints")
 
 end subroutine
 

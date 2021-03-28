@@ -93,6 +93,7 @@ subroutine RunTPS(self)
     real(KREAL), allocatable :: matrixS(:,:), matrixV(:,:), matrixL(:,:)
     integer(KINT) :: i, dimens
     real(KREAL) :: h, l, x, v0, alpha
+    real(KREAL) :: potentialGraph(size(self%grid%gridPoints))
 
     ! get the dimension of the matrices and h
     dimens = GetDimension(self%grid)
@@ -102,6 +103,7 @@ subroutine RunTPS(self)
     call AllocAndInit(matrixS, dimens)
     call AllocAndInit(matrixV, dimens)
     call AllocAndInit(matrixL, dimens)
+    potentialGraph = 0
 
     ! fill matrix S 
     forall (i = 1:size(matrixS, 1)) 
@@ -112,7 +114,7 @@ subroutine RunTPS(self)
         matrixS(i + 1, i) = 1
     enddo
 
-    ! fill matrix V
+    ! fill matrix V and write the potential to a file
     if (self%potential == "ParticleInBox") then
         print *, "Particle in a box is used"
         l = abs(GetLowBound(self%grid))*2
@@ -127,14 +129,16 @@ subroutine RunTPS(self)
             v0 = 3
             alpha = 0.1
             matrixV(i,i) = GaussianPotWell(x, v0, alpha)
+            potentialGraph(i) = GaussianPotWell(x,v0, alpha)
         enddo
+        call WriteToFile(potentialGraph, "GaussianPotWell")
     endif
 
     ! calculate matrix L and diagonalize
     matrixL = -matrixS/(2*h**2) + matrixV
     call diagonalize(matrixL, self%eigenVectors, self%eigenValues)
 
-    ! check whether the eigenvectors are negative and corrects
+    ! check whether the eigenvectors are negative and correct
     if (self%eigenVectors(1,1) > self%eigenVectors(2,1)) then
         self%eigenVectors = -1*self%eigenVectors
     endif

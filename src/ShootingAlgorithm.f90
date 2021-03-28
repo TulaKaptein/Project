@@ -102,7 +102,7 @@ subroutine ShootingLoopAlpha(grid, y, eigenVector, lambda, potential)
         lambda = lambda - correction
 
         ! check for convergence
-        if (abs(correction) < 1e-15) then
+        if (abs(correction) < 1e-10) then
             ! end the loop
             print *, "CONVERGED"
             exit
