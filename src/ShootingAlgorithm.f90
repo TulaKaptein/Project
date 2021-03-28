@@ -3,6 +3,8 @@
 ! a three-point scheme, to calculate the eigenstates of the 1D Schrödinger equation 
 ! with a certain potential
 !
+! the integration_module was provided
+!
 module ShootingAlgorithmModule
     use MakeGridModule
     use ThreePointSchemeModule

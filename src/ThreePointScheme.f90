@@ -2,6 +2,8 @@
 ! Module that uses the three-point scheme to calculate eigenvectors and eigenvalues
 ! for a 1D Schrödinger equation with a certain potential
 !
+! the diagonalization module was provided
+!
 module ThreePointSchemeModule
     use NumberKinds
     use MakeGridModule
