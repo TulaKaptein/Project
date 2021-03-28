@@ -98,13 +98,11 @@ subroutine ShootingLoopAlpha(grid, y, eigenVector, lambda, potential)
 
         ! correct the eigenvalue
         correction = deltaLambda(grid, y)
-        print *, correction
         lambda = lambda - correction
 
         ! check for convergence
         if (abs(correction) < 1e-10) then
             ! end the loop
-            print *, "CONVERGED"
             exit
         endif
     enddo

@@ -116,14 +116,18 @@ subroutine RunTPS(self)
 
     ! fill matrix V and write the potential to a file
     if (self%potential == "ParticleInBox") then
+        print *
         print *, "Particle in a box is used"
+        print *
         l = abs(GetLowBound(self%grid))*2
         do i = 1, size(matrixV, 1)
             x = GetGridPoint(self%grid, i)
             matrixV(i,i) = ParticleInBox(x, l)
         enddo
     else if(self%potential == "GaussianPotWell") then
+        print *
         print *, "Gaussian potential well is used"
+        print *
         do i = 1, size(matrixV, 1)
             x = GetGridPoint(self%grid, i)
             v0 = 3
